@@ -1,39 +1,24 @@
-<!-- 
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# Пишем кастомные правила линтера для Dart и Flutter-проектов
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages). 
+[Стандартный набор правил Дартового линтера](https://dart.dev/tools/linter-rules) содержит много готовых проверок кода,
+которые помогают нам выявлять потенциальные ошибки и проблемы в коде.
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages). 
--->
+Однако иногда приходится писать собственные правила для линтера. Поводом может стать как отсутствие готового решения в
+наборе правил языка, либо же желание покрыть важные части кода проверками, которые лучше доверить роботу (CI, либо же
+локальным проверкам перед коммитами).
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+Dart имеет свой фреймворк для создания подобных решений, и называется
+он [analyzer_plugin](https://pub.dev/packages/analyzer_plugin). К сожалению, сейчас он не доступен для общего
+пользования. Однако есть и другие решения, которые не только позволяют писать свои правила линтера, но и дают
+дополнительные возможности для разработки кастомных инструментов.
 
-## Features
+Мы будем использовать [custom_lint](https://pub.dev/packages/custom_lint). Плагин поддерживается сообществом, содержит
+рабочие примеры кода, а так же дает возможность запускать свои правила отдельно из CLI.
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+## Что будем проверять?
 
-## Getting started
+## Разбор кода
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+## Запуск
 
-## Usage
-
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder. 
-
-```dart
-const like = 'sample';
-```
-
-## Additional information
-
-TODO: Tell users more about the package: where to find more information, how to 
-contribute to the package, how to file issues, what response they can expect 
-from the package authors, and more.
+## Что дальше?
