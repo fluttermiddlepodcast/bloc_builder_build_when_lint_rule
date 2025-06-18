@@ -1,0 +1,16 @@
+name: bloc_builder_build_when_lint_rule
+description: A rule for Dart Analyzer that will check for forced use of the buildWhen parameter for BlocBuilder
+version: 1.0.0
+repository: https://github.com/fluttermiddlepodcast/bloc_builder_build_when_lint_rule
+
+environment:
+  sdk: ^3.6.1
+
+dependencies:
+  analyzer:
+  custom_lint_builder:
+
+dev_dependencies:
+  custom_lint:
+  lints: ^5.0.0
+  test: ^1.24.0
