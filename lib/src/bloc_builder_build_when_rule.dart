@@ -46,7 +46,7 @@ class BlocBuilderBuildWhenRule extends DartLintRule {
   ) {
     final element = type?.type?.element;
 
-    if (element == null || element.name == matchType) {
+    if (element == null || element.name != matchType) {
       return false;
     }
 
