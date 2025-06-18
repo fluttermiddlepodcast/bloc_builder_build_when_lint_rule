@@ -46,8 +46,9 @@ Widget build(BuildContext context) {
 @override
 Widget build(BuildContext context) {
   return BlocBuilder<AuthBloc, AuthState>(
-    buildWhen: (previous, current) =>
-    previous.isAuthenticated != current.isAuthenticated,
+    buildWhen: (previous, current) {
+      return previous.isAuthenticated != current.isAuthenticated;
+    },
     builder: (context, state) {
       return state.isAuthenticated ? HomePage() : LoginPage();
     },
