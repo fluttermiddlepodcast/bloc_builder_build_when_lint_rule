@@ -3,9 +3,18 @@
 [Стандартный набор правил Дартового линтера](https://dart.dev/tools/linter-rules) содержит много готовых проверок кода,
 которые помогают нам выявлять потенциальные ошибки и проблемы в проекте.
 
-Однако, иногда приходится писать собственные правила для линтера. Поводом может стать как отсутствие готового решения в
-наборе правил языка, так и желание покрыть важные части кода проверками, которые лучше доверить независимому
-интсрументу.
+Однако, иногда приходится писать собственные правила для линтера.
+
+**Вот несколько причин, почему нам могут потребоваться свои проверки кода:**
+
+- Единые стандарты: обеспечение согласованности в больших командах.
+- Обнаружение специфических проблем: бизнес-логика или особенности архитектуры проекта могут содержать логику,
+  работоспособность которой лучше доверить машине.
+- Сокращение Code Review: ваш код уже прошел минимальный набор обязательных проверок, и ревьюеру будет проще
+  сконцентрироваться на бизнес-части, нежели писать кучу однотипных комментариев с просьбами добавить или убрать что-то
+  из проекта.
+- Документирование: кастомные правила порой говорят сами за себя. Вам не нужно читать кучу документации перед началом
+  работы над проектом, многое будет подсвечено в процессе.
 
 Dart имеет свой фреймворк для создания подобных решений, и называется
 он [analyzer_plugin](https://pub.dev/packages/analyzer_plugin). К сожалению, сейчас он не доступен для общего
@@ -68,18 +77,106 @@ Widget build(BuildContext context) {
 
 ## Разбор кода
 
+**В проекте имеем всего 2 файла:**
+
+- [./lib/bloc_builder_build_when_lint_rule.dart](./lib/bloc_builder_build_when_lint_rule.dart) - код с конфигурацией нашего плагина.
+- [./lib/src/bloc_builder_build_when_rule.dart](./lib/src/bloc_builder_build_when_rule.dart) - код с логикой нашего правила.
+
+### Код правила
+
+[./lib/src/bloc_builder_build_when_rule.dart](./lib/src/bloc_builder_build_when_rule.dart)
+
+**Полный листинг с комментариями к каждой строке кода:**
+
+```dart
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/error/error.dart' show ErrorSeverity;
+import 'package:analyzer/error/listener.dart';
+import 'package:custom_lint_builder/custom_lint_builder.dart';
+
+class BlocBuilderBuildWhenRule extends DartLintRule {
+  BlocBuilderBuildWhenRule()
+      : super(
+    code: LintCode(
+      name: 'bloc_builder_build_when_rule',
+      problemMessage: 'Missing buildWhen in BlocBuilder',
+      correctionMessage: 'Add buildWhen parameter to optimize rebuilds',
+      errorSeverity: ErrorSeverity.ERROR,
+    ),
+  );
+
+  @override
+  void run(CustomLintResolver resolver,
+      ErrorReporter reporter,
+      CustomLintContext context,) {
+    context.registry.addInstanceCreationExpression(
+          (node) {
+        final type = node.constructorName.type;
+
+        if (!_isType(type, 'BlocBuilder', 'flutter_bloc')) {
+          return;
+        }
+
+        final hasBuildWhen = node.argumentList.arguments.any(
+              (arg) => arg is NamedExpression && arg.name.label.name == 'buildWhen',
+        );
+
+        if (!hasBuildWhen) {
+          reporter.atNode(node, code);
+        }
+      },
+    );
+  }
+
+  bool _isType(TypeAnnotation? type,
+      String matchType,
+      String package,) {
+    final element = type?.type?.element;
+
+    if (element == null || element.name != matchType) {
+      return false;
+    }
+
+    return element.library?.location?.components.any((c) => c.contains(package)) ?? false;
+  }
+}
+```
+
+### Код конфигураци
+
+[./lib/bloc_builder_build_when_lint_rule.dart](./lib/bloc_builder_build_when_lint_rule.dart)
+
+**Содержимое файла с комментариями:**
+
+```dart
+import 'package:bloc_builder_build_when_lint_rule/src/bloc_builder_build_when_rule.dart';
+import 'package:custom_lint_builder/custom_lint_builder.dart';
+
+PluginBase createPlugin() => _BlocBuilderLintPlugin();
+
+class _BlocBuilderLintPlugin extends PluginBase {
+  @override
+  List<LintRule> getLintRules(CustomLintConfigs configs) =>
+      [
+        BlocBuilderBuildWhenRule(),
+      ];
+}
+```
+
 ## Запуск
+
+Рассмотрим как локальный запуск - работу с IDE, так и конфигурацию для CI.
 
 ### Локально
 
 После создания правила, нужно добавить его в ваш проект. Поскольку мы зависим от `custom_lint`, его так же нужно
-импортировать в `dev_dependencies`.
+импортировать в `dev_dependencies`. Готовый файл можно найти [тут](./pubspec.yaml).
 
 **Из Git-репозитория добавление будет таким:**
 
 ```yaml
 dev_dependencies:
-  custom_lint: ^0.1.0
+  custom_lint:
   bloc_builder_build_when_rule:
     git:
       url: https://github.com/fluttermiddlepodcast/bloc_builder_build_when_lint_rule.git
@@ -90,7 +187,7 @@ dev_dependencies:
 
 ```yaml
 dev_dependencies:
-  custom_lint: ^0.1.0
+  custom_lint:
   bloc_builder_build_when_rule:
     path: ../bloc_builder_build_when_lint_rule
 ```
@@ -141,6 +238,25 @@ custom_lint:
 ```
 
 Упавший билд CI можно посмотреть [в этом пулл реквесте](https://github.com/fluttermiddlepodcast/bloc_example/pull/12).
+
+## Подводные камни
+
+Если бы с написанием правил для линтера было все так просто, много проблемных моментов на проектах удалось бы избежать в
+процессе его написания и рефакторинга.
+
+**К сожалению, мы имеем такие минусы:**
+
+- Сложность освоения: если небольшие правила можно написать без дополнительной подготовки с каким-нибудь AI-ассистентом,
+  то со сложными решениями придется повозиться. Понадобится изучить
+  дартовый [AST](https://ru.wikipedia.org/wiki/%D0%90%D0%B1%D1%81%D1%82%D1%80%D0%B0%D0%BA%D1%82%D0%BD%D0%BE%D0%B5_%D1%81%D0%B8%D0%BD%D1%82%D0%B0%D0%BA%D1%81%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%BE%D0%B5_%D0%B4%D0%B5%D1%80%D0%B5%D0%B2%D0%BE)
+  и работу аналайзера кода в целом.
+- Возможные ложные срабатывания: есть риск что-то упустить во время написания сложной логики обработки кода.
+- Поддержка о обновление: Dart, Flutter и сторонние плагины обновляются, и нужно следить за тем, насколько ваши правила
+  актуальны для используемых инструментов.
+- Производительность: сложные проверки или неоптимизированные правила могут замедлить работу Аналайзера даже на средних
+  проектах. Может потребоваться дополнительное время на написание более оптимального подхода по анализу кода.
+- Overengineering: есть риск создания бесполезных правил ради правил. В купе с минусами выше становится одной из главных
+  проблем. Лучше заранее подумать, насколько +1 анализатор кода вам действительно нужен.
 
 ## Выводы
 
