@@ -42,6 +42,7 @@ Dart имеет свой фреймворк для создания подобн
 @override
 Widget build(BuildContext context) {
   return BlocBuilder<AuthBloc, AuthState>(
+    // Тут должен быть параметр `buildWhen`, но его нет.
     builder: (context, state) {
       return state.isAuthenticated ? HomePage() : LoginPage();
     },
