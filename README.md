@@ -87,7 +87,7 @@ Widget build(BuildContext context) {
 
 [./lib/src/bloc_builder_build_when_rule.dart](./lib/src/bloc_builder_build_when_rule.dart)
 
-**Полный листинг с комментариями к каждой строке кода:**
+**Полный листинг с кода правила c комментариями:**
 
 ```dart
 import 'package:analyzer/dart/ast/ast.dart';
@@ -95,40 +95,70 @@ import 'package:analyzer/error/error.dart' show ErrorSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
+// Класс с логикой нашего правила.
+// Наследуемся от DartLintRule - класса из плагина custom_lint.
+// DartLintRule содержит в себе набор методов, которые помогут нам в написании правила линтера.
 class BlocBuilderBuildWhenRule extends DartLintRule {
   BlocBuilderBuildWhenRule()
       : super(
+    // LintCode - описание нашего правила.
+    // Данные из него будут браться для отображения информации об ошибке или предупреждении в IDE / CLI.
     code: LintCode(
+      // Название правила.
+      // Можете брать примеры именований из https://dart.dev/tools/linter-rules#rules.
       name: 'bloc_builder_build_when_rule',
+      // Описание проблемы.
       problemMessage: 'Missing buildWhen in BlocBuilder',
+      // Описание того, что нужно сделать для исправления ошибки.
       correctionMessage: 'Add buildWhen parameter to optimize rebuilds',
+      // Серьезность проблемы.
+      // Обычно для правил линтера используется либо WARNING, либо ERROR.
+      // `WARNING` - предупреждение о проблемном месте в коде. Может влиять на работу приложения, но не сильно критично, чтобы делать правило ошибкой.
+      // `ERROR` - ошибка, без которой лучше не собирать проект. Нужно править как только она появилась.
+      // Есть и другие виды серьезности для правил, можете посмотреть их в документации.
+      // P.S: с ошибками линтера можно собирать приложение, если они не влияют на процесс билда. Но, раз они есть, лучше поправить, либо же вообще отключить, раз есть кейсы, когда их можно игнорировать.
       errorSeverity: ErrorSeverity.ERROR,
     ),
   );
 
+  // Основной метод, где происходит анализ кода.
   @override
   void run(CustomLintResolver resolver,
       ErrorReporter reporter,
       CustomLintContext context,) {
+    // Региструем обработчик кода.
+    // В нашем случае используем `addInstanceCreationExpression`, так как нужно проверять создание `BlocBuilder` в проекте. А это как раз то место, где создается инстанс.
     context.registry.addInstanceCreationExpression(
-          (node) {
-        final type = node.constructorName.type;
+            (node) {
+          // Для начала, нужно проверить тип объекта, который поступает на проверку.
+          // В `addInstanceCreationExpression` будут попадать все созданные инстансы в проекте, а нам нужен только `BlocBuilder`.
+          final type = node.constructorName.type;
 
-        if (!_isType(type, 'BlocBuilder', 'flutter_bloc')) {
-          return;
+          // Проверяем тип класса и его пакет.
+          // `BlocBuilder` может быть реализован не только в пакете `flutter_bloc`, и мы не знаем, что там может быть.
+          if (!_isType(type, 'BlocBuilder', 'flutter_bloc')) {
+            return;
+          }
+          
+          // После прохождения всех проверок, мы точно знаем, что перед нами инстанс `BlocBuilder` из `flutter_bloc`.
+          // Теперь осталось только проверить наличие параметра `buildWhen`.
+          final hasBuildWhen = node.argumentList.arguments.any(
+                (arg) => arg is NamedExpression && arg.name.label.name == 'buildWhen',
+          );
+
+          // Если параметр `buildWhen` отсутствует у проверяемого нами `BlocBuilder`, подсвечиваем ошибку.
+          if (!hasBuildWhen) {
+            // В репортера передаем:
+            // `node` - место в коде, где расположена ошибка.
+            // `code` - описание ошибки.
+            reporter.atNode(node, code);
+          }
         }
-
-        final hasBuildWhen = node.argumentList.arguments.any(
-              (arg) => arg is NamedExpression && arg.name.label.name == 'buildWhen',
-        );
-
-        if (!hasBuildWhen) {
-          reporter.atNode(node, code);
-        }
-      },
     );
   }
 
+  // Проверка типа по заданным параметрам.
+  // Так же проверяем и пакет типа, чтобы исключить возможные коллизии.
   bool _isType(TypeAnnotation? type,
       String matchType,
       String package,) {
@@ -153,12 +183,21 @@ class BlocBuilderBuildWhenRule extends DartLintRule {
 import 'package:bloc_builder_build_when_lint_rule/src/bloc_builder_build_when_rule.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
+// Главная функция-фабрика для создания плагина.
+// Важно:
+// - Должна называться именно `createPlugin`;
+// - Возвращает обязательно экземпляр плагина, реализующий PluginBase.
 PluginBase createPlugin() => _BlocBuilderLintPlugin();
 
+// Наш плагин с кастомными правилами.
 class _BlocBuilderLintPlugin extends PluginBase {
+  // Переопределяем метод, который возвращает список правил.
   @override
   List<LintRule> getLintRules(CustomLintConfigs configs) =>
       [
+        // Создаем и возвращаем экземпляр нашего правила.
+        // Самих правил может быть сколько вам угодно.
+        // Порядок не имеет значения.
         BlocBuilderBuildWhenRule(),
       ];
 }
