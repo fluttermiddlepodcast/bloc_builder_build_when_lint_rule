@@ -162,12 +162,15 @@ class BlocBuilderBuildWhenRule extends DartLintRule {
   bool _isType(TypeAnnotation? type,
       String matchType,
       String package,) {
+    // Для проверки всех нужных нам полей, для начала получим элемент кода.
     final element = type?.type?.element;
 
+    // Если элемента нет, или его имя (название класса) не соответствуют нашим требованиями, возвращаем `false` и прекращаем исследование этой части кода.
     if (element == null || element.name != matchType) {
       return false;
     }
 
+    // После проверки наличия элемента и его названия, проверяем пакет на соответствие тому, что передан в аргументе метода.
     return element.library?.location?.components.any((c) => c.contains(package)) ?? false;
   }
 }
