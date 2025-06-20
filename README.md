@@ -24,6 +24,15 @@ Dart имеет свой фреймворк для создания подобн
 собственных правил линтера. Плагин поддерживается сообществом, содержит рабочие примеры кода, а также дает возможность
 запускать свои правила отдельно из CLI.
 
+### Содержание
+
+- [Что будем проверять?](#что-будем-проверять)
+- [Реализация правила](#реализация-правила)
+- [Конфигурация правила](#конфигурация-плагина)
+- [Запуск](#запуск)
+- [Подводные камни](#подводные-камни)
+- [Выводы](#выводы)
+
 ## Что будем проверять?
 
 Возьмем как пример реальный кейс, который может иногда встречаться в Flutter-проектах. Будем разбирать его в
@@ -56,6 +65,7 @@ Widget build(BuildContext context) {
 @override
 Widget build(BuildContext context) {
   return BlocBuilder<AuthBloc, AuthState>(
+    // Требуемый `buildWhen` есть, ошибки не будет.
     buildWhen: (previous, current) {
       return previous.isAuthenticated != current.isAuthenticated;
     },
@@ -97,28 +107,19 @@ import 'package:analyzer/error/error.dart' show ErrorSeverity;
 import 'package:analyzer/error/listener.dart';
 import 'package:custom_lint_builder/custom_lint_builder.dart';
 
-// Класс с логикой нашего правила.
-// Наследуемся от DartLintRule - класса из плагина custom_lint.
-// DartLintRule содержит в себе набор методов, которые помогут нам в написании правила линтера.
 class BlocBuilderBuildWhenRule extends DartLintRule {
   BlocBuilderBuildWhenRule()
       : super(
     // LintCode - описание нашего правила.
     // Данные из него будут браться для отображения информации об ошибке или предупреждении в IDE / CLI.
     code: LintCode(
-      // Название правила.
-      // Можете брать примеры именований из https://dart.dev/tools/linter-rules#rules.
       name: 'bloc_builder_build_when_rule',
-      // Описание проблемы.
       problemMessage: 'Missing buildWhen in BlocBuilder',
-      // Описание того, что нужно сделать для исправления ошибки.
       correctionMessage: 'Add buildWhen parameter to optimize rebuilds',
       // Серьезность проблемы.
       // Обычно для правил линтера используется либо WARNING, либо ERROR.
       // `WARNING` - предупреждение о проблемном месте в коде. Может влиять на работу приложения, но не сильно критично, чтобы делать правило ошибкой.
       // `ERROR` - ошибка, без которой лучше не собирать проект. Нужно править как только она появилась.
-      // Есть и другие виды серьезности для правил, можете посмотреть их в документации.
-      // P.S: с ошибками линтера можно собирать приложение, если они не влияют на процесс билда. Но, раз они есть, лучше поправить, либо же вообще отключить, раз есть кейсы, когда их можно игнорировать.
       errorSeverity: ErrorSeverity.ERROR,
     ),
   );
